@@ -1,6 +1,11 @@
+
+
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const pool = require('./src/config/db');
+const apiRoutes = require('./src/routes/api.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -8,36 +13,30 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Base de datos en memoria temporal
-let inventoryDb = [
-  { id: 'INV-001', epc: 'E280689400004001F82B', name: 'Lector Biométrico ZKTeco', category: 'Seguridad', stock: 45, rfidTagged: 45, location: 'Madefront Ferretería - Estante A1', status: 'Optimal' },
-  { id: 'INV-002', epc: 'E280689400004001F82C', name: 'Cámara IP Domo 4K', category: 'CCTV', stock: 12, rfidTagged: 10, location: 'Madefront Ferretería - Estante B3', status: 'Low' }
-];
+app.use('/api', apiRoutes);
 
-let movementsDb = [
-  { id: 'MOV-501', type: 'ENTRADA', item: 'Lector Biométrico ZKTeco', qty: 15, user: 'Admin', time: 'Hace 10 min' }
-];
+// Iniciar servidor después de comprobar PostgreSQL
+const startServer = async () => {
+  try {
+    await pool.query('SELECT NOW()');
 
-app.get('/api/inventory', (req, res) => {
-  res.json(inventoryDb);
-});
+    console.log('PostgreSQL conectado correctamente.');
 
-app.post('/api/inventory', (req, res) => {
-  const newProduct = req.body;
-  inventoryDb.unshift(newProduct);
-  res.status(201).json({ message: 'Producto registrado con éxito', product: newProduct });
-});
+    app.listen(PORT, () => {
+      console.log(
+        `Zonika funcionando en http://localhost:${PORT}`
+      );
+    });
 
-app.get('/api/movements', (req, res) => {
-  res.json(movementsDb);
-});
+  } catch (error) {
+    console.error(
+      'No se pudo conectar a la base de datos:',
+      error.message
+    );
 
-app.post('/api/movements', (req, res) => {
-  const newMovement = req.body;
-  movementsDb.unshift(newMovement);
-  res.status(201).json({ message: 'Movimiento registrado con éxito', movement: newMovement });
-});
+    process.exit(1);
+  }
+};
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor backend de Zonika corriendo en http://localhost:${PORT}`);
-});
+startServer();
+
